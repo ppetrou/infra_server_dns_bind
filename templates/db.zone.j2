@@ -1,0 +1,8 @@
+$ORIGIN {{ name }}.     ; designates the start of this zone file in the namespace
+$TTL 1h                 ; default expiration time of all resource records without their own TTL value
+{{ name }}.   IN  SOA   {{ infra_server_dns_bind_server_name }}. {{ infra_server_dns_bind_admin_email }}. ( 2007120710 1d 2h 4w 1h )
+              IN NS {{ infra_server_dns_bind_server_name }}.
+
+{% for a_record in a_records %}
+{{ a_record.name }} IN A {{ a_record.ip }}
+{% endfor %}

@@ -1,2 +1,9 @@
 ---
 # vars file for infra_server_dns_bind
+
+infra_server_dns_bind_package: bind-32:9.11.36-3.el8.x86_64
+infra_server_dns_bind_zones_dirpath: /var/named/
+infra_server_dns_bind_systemd_service_name: named
+infra_server_dns_bind_ip_prefixed_with_at: "@{{ infra_server_dns_bind_ip }}"
+infra_server_dns_bind_forwarders: [8.8.8.8, 4.4.4.4]
+infra_server_dns_bind_named_conf_filepath: /etc/named.conf

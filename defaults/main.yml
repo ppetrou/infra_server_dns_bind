@@ -1,2 +1,13 @@
 ---
 # defaults file for infra_server_dns_bind
+
+infra_server_dns_bind_version: ''
+infra_server_dns_bind_port: 0
+
+infra_server_dns_bind_server_name: ''
+infra_server_dns_bind_admin_email: ''
+
+infra_server_dns_bind_zones: []
+
+infra_server_dns_bind_ip: ''
+infra_server_dns_bind_run_assertions: no

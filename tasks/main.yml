@@ -1,2 +1,120 @@
 ---
 # tasks file for infra_server_dns_bind
+
+# Install bind
+- name: Install bind
+  ansible.builtin.dnf:
+    name: "{{ infra_server_dns_bind_package }}"
+    state: present
+
+# Create named.conf
+- name: Create named.conf
+  vars:
+    zones: "{{ infra_server_dns_bind_zones | map(attribute='name') | list | unique }}"
+    reverse_zones: "{{ infra_server_dns_bind_zones | map(attribute='reverse_zone') | list | unique }}"
+  template:
+    src: named.conf.j2
+    dest: "{{ infra_server_dns_bind_named_conf_filepath }}"
+    mode: '0644'
+    owner: root
+    group: root
+
+# Create zone files
+- name: Create zone files
+  vars:
+    name: "{{ zone.name }}"
+    reverse_zone: "{{ zone.reverse_zone }}"
+    a_records: "{{ zone.a_records }}"
+  ansible.builtin.template:
+    src: db.zone.j2
+    dest: "{{ (infra_server_dns_bind_zones_dirpath, 'db.' + name) | path_join }}"
+    owner: root
+    group: root
+  loop: "{{ infra_server_dns_bind_zones }}"
+  loop_control:
+    label: "{{ zone.name }}"
+    loop_var: zone
+
+# Create reverse zone files
+- name: Create reverse zone files
+  vars:
+    reverse_zones: "{{ infra_server_dns_bind_zones | map(attribute='reverse_zone') | list | unique }}"
+  ansible.builtin.template:
+    src: db.reverse.j2
+    dest: "{{ (infra_server_dns_bind_zones_dirpath, 'db.' + reverse_zone) | path_join }}"
+    owner: root
+    group: root
+  loop: "{{ reverse_zones }}"
+  loop_control:
+    label: "{{ reverse_zone }}"
+    loop_var: reverse_zone
+
+# Enable Bind Service
+- name: Enable Bind Service
+  ansible.builtin.systemd:
+    name: "{{ infra_server_dns_bind_systemd_service_name }}"
+    enabled: true
+    masked: no
+
+# Start Bind Service
+- name: Start Bind Service
+  ansible.builtin.systemd:
+    name: "{{ infra_server_dns_bind_systemd_service_name }}"
+    state: started
+
+# Check firewalld state
+- name: Check firewalld state
+  ansible.builtin.systemd:
+    name: firewalld
+  register: r_firewalld_state
+
+# Setup firewalld
+- name: Setup firewalld
+  ansible.posix.firewalld:
+    port: "{{ dns_port_proto }}"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  loop:
+    - "{{ infra_server_dns_bind_port }}/tcp"
+    - "{{ infra_server_dns_bind_port }}/udp"
+  loop_control:
+    label: "{{ dns_port_proto }}"
+    loop_var: dns_port_proto
+  when: r_firewalld_state.status.ActiveState == "active"
+
+# Assert the DNS Entries - Forward Lookup
+- name: Assert the DNS Entries - Forward Lookup
+  vars:
+    lookup_host: "{{ a_record.1.name}}.{{ a_record.0.name }}"
+    lookup_ip: "{{ a_record.1.ip }}"
+  ansible.builtin.assert:
+    quiet: yes
+    success_msg: "DNS Query for {{ lookup_host }} - OK"
+    fail_msg: "DNS Query for {{ lookup_host }} - FAILED"
+    that:
+      - "{{ lookup('dig', lookup_host, infra_server_dns_bind_ip_prefixed_with_at) == lookup_ip }}"
+  loop: "{{ infra_server_dns_bind_zones|subelements('a_records') }}"
+  loop_control:
+    label: "{{ lookup_host }} -> {{ lookup_ip }}"
+    loop_var: a_record
+  when:
+    - infra_server_dns_bind_run_assertions == true
+
+# Assert the DNS Entries - Reverse Lookup
+- name: Assert the DNS Entries - Reverse Lookup
+  vars:
+    lookup_host: "{{ a_record.1.name}}.{{ a_record.0.name }}."
+    lookup_ip: "{{ a_record.1.ip }}/PTR"
+  ansible.builtin.assert:
+    quiet: yes
+    success_msg: "DNS Query for {{ lookup_ip }} - OK"
+    fail_msg: "DNS Query for {{ lookup_ip }} - FAILED"
+    that:
+      - "{{ lookup('dig', lookup_ip, infra_server_dns_bind_ip_prefixed_with_at) == lookup_host }}"
+  loop: "{{ infra_server_dns_bind_zones|subelements('a_records') }}"
+  loop_control:
+    label: "{{ lookup_ip }} -> {{ lookup_host }}"
+    loop_var: a_record
+  when:
+    - infra_server_dns_bind_run_assertions == true

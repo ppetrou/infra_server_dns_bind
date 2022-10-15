@@ -1,38 +1,69 @@
-Role Name
+infra_server_dns_bind
 =========
 
-A brief description of the role goes here.
+A simple role to install and configure bind.
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+* dnspython (python library, http://www.dnspython.org/) installed in the ansible controller
+
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+```
+Variable                              Level                 Description
+
+infra_server_dns_bind_version         Default               Bind Version
+infra_server_dns_bind_port            Default               Bind Port
+infra_server_dns_bind_server_name     Default               DNS Server Name
+infra_server_dns_bind_admin_email     Default               DNS Server Admin Email
+infra_server_dns_bind_zones           Default               DNS Zones (Forward and Reverse)
+infra_server_dns_bind_ip              Default               Bind Listen IP
+infra_server_dns_bind_run_assertions  Default               Flag whether to run dig assertions
+```
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+NA
 
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+```
+---
+- hosts: dns_server
+  become: yes
+  roles:
+    - role: infra_server_dns_bind
+      vars:
+        infra_server_dns_bind_version: 32:9.11.36-3.el8
+        infra_server_dns_bind_port: 53
+        infra_server_dns_bind_server_name: devserver.local
+        infra_server_dns_bind_admin_email: admin.email.com
+        infra_server_dns_bind_ip: 192.168.122.55
+        infra_server_dns_bind_run_assertions: yes
+        infra_server_dns_bind_zones:
+          - name: example.local
+            reverse_zone: 168.192.in-addr.arpa
+            a_records:
+              - name: subdomain1
+                ip: 192.168.1.111
+              - name: subdomain2
+                ip: 192.168.1.121
+```
 
 License
 -------
 
-BSD
+Apache 2.0
 
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```
+Petros Petrou
+ppetrou@gmail.com
+```

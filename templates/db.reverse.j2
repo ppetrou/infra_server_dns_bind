@@ -1,0 +1,11 @@
+$TTL 1h                 ; default expiration time of all resource records without their own TTL value
+@   IN  SOA   {{ infra_server_dns_bind_server_name }}. {{ infra_server_dns_bind_admin_email }}. ( 2007120710 1d 2h 4w 1h )
+    IN NS {{ infra_server_dns_bind_server_name }}.
+
+{% for zone in infra_server_dns_bind_zones %}
+{% if reverse_zone == zone.reverse_zone %}
+{% for a_record in zone.a_records %}
+{{ a_record.ip.split('.')[3] }}.{{ a_record.ip.split('.')[2] }} IN PTR {{ a_record.name }}.{{ zone.name }}.
+{% endfor %}
+{% endif %}
+{% endfor%}
